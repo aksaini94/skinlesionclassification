@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[16]:
+# In[37]:
 
 # Setting up
 from __future__ import print_function, division
@@ -20,18 +20,17 @@ from data_loading import *
 
 
 #transform1 = transforms.Compose([Rescale((256,256)), RandomCrop(224), ToTensor(), transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])])
-transform = transforms.Compose([transforms.ToPILImage(),transforms.Scale(256), transforms.RandomCrop(224), transforms.ToTensor(), transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])])
+transform_list = transforms.Compose([grey_world(),transforms.ToPILImage(),transforms.Scale(256), transforms.RandomCrop(224), transforms.ToTensor()])#, transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])])
 
-
-#input_dir= '../datasets/'
-input_dir = '../../../mnt/nfs/work1/lspector/aks/datasets/'
+input_dir= '../datasets/'
+#input_dir = '../../../mnt/nfs/work1/lspector/aks/datasets/'
 
 train = SkinLesionDataset(csv_file=input_dir+'ISIC-2017_Training_Part3_GroundTruth.csv',
-                                    root_dir=input_dir+'ISIC-2017_Training_Data/', transform=transform)
+                                    root_dir=input_dir+'ISIC-2017_Training_Data/', transform=transform_list)
 validation  = SkinLesionDataset(csv_file=input_dir+'ISIC-2017_Validation_Part3_GroundTruth.csv',
-                                    root_dir=input_dir+'ISIC-2017_Validation_Data/', transform = transform)
+                                    root_dir=input_dir+'ISIC-2017_Validation_Data/', transform = transform_list)
 test = SkinLesionDataset(csv_file=input_dir+'ISIC-2017_Test_v2_Part3_GroundTruth.csv',
-                                    root_dir=input_dir+'ISIC-2017_Test_v2_Data/', transform = transform)
+                                    root_dir=input_dir+'ISIC-2017_Test_v2_Data/', transform = transform_list)
 
 train_data = DataLoader(train, batch_size=8,
                         shuffle=True, num_workers=1)
@@ -48,34 +47,21 @@ get_ipython().magic(u'load_ext autoreload')
 get_ipython().magic(u'autoreload 2')
 
 
-# In[17]:
-
-for i_batch, sample_batched in enumerate(test_data):
-    print(i_batch, sample_batched['image'].shape)
-
-    # observe 4th batch and stop.
-    if i_batch == 2:
-        plt.figure()
-        show_landmarks_batch(sample_batched)
-        plt.axis('off')
-        plt.ioff()
-        plt.show()
-        break
-
-
-# In[19]:
-
-# visualizing some images
-# Get a batch of training data
-inputs = next(iter(train_data))
-
-# Make a grid from batch
-out = torchvision.utils.make_grid(inputs['image'])
-
-imshow(out, title="First one")
-
-
 # In[32]:
+
+#from skimage import io, transform
+#image = io.imread('../datasets/ISIC-2017_Training_Data/ISIC_0000000.jpg')
+
+#image_modified = grey_world(image)
+
+
+#plt.imshow(image)
+
+
+# In[23]:
+
+
+# In[38]:
 
 model_conv = torchvision.models.resnet18(pretrained=True)
 for param in model_conv.parameters():
@@ -104,13 +90,30 @@ model_conv = train_model(model_conv, criterion, optimizer_conv,
                          exp_lr_scheduler, dataloaders,dataset_sizes,num_epochs=5)
 
 
-# In[30]:
+# In[18]:
+
+torch.save(model_conv,'mytraining.pt')
+
+
+# In[19]:
+
+mymodel = torch.load('mytraining.pt')
+
+
+# In[20]:
 
 #dataloaders['test'] = dataloaders['test'][0:10]
-test_model(model_conv, criterion, dataloaders,dataset_sizes)
+test_model(mymodel, criterion, dataloaders,dataset_sizes)
 
 
-# In[ ]:
+# In[82]:
 
-# Final Algorithm
+# Actual Algorithm
+#models_list = (model_conv,model_conv)
+#model_data = train_meta_model(models_list, 1, dataloaders, dataset_sizes)
+
+
+# In[83]:
+
+#test_meta_model(model_data, dataloaders, dataset_sizes)
 

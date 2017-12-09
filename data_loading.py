@@ -32,6 +32,8 @@ def show_landmarks(image):
     plt.pause(0.001) 
 
 
+
+
 class SkinLesionDataset(Dataset):
     """Face Landmarks dataset."""
 
@@ -45,7 +47,7 @@ class SkinLesionDataset(Dataset):
         """
         self.classification_frame = pd.read_csv(csv_file)
         self.root_dir = root_dir
-        self.transform = transform
+        self.transform= transform
 
     def __len__(self):
         return len(self.classification_frame)
@@ -98,6 +100,23 @@ class Rescale(object):
 
         return img#sample
 
+    
+def grey_world_func(nimg):
+    nimg = nimg.transpose(2, 0, 1).astype(np.uint32)
+    mu_g = np.average(nimg[1])
+    nimg[0] = np.minimum(nimg[0]*(mu_g/np.average(nimg[0])),255)
+    nimg[2] = np.minimum(nimg[2]*(mu_g/np.average(nimg[2])),255)
+    return  nimg.transpose(1, 2, 0).astype(np.uint8)    
+
+class grey_world(object):
+    
+    def __call__(self, sample):
+        image = sample
+        image = grey_world_func(image)
+
+       # sample = {'image': torch.from_numpy(image), 'class1': class1,'class2': class2}
+
+        return image#torch.from_numpy(image)
 
 class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
@@ -114,7 +133,7 @@ class ToTensor(object):
 
        # sample = {'image': torch.from_numpy(image), 'class1': class1,'class2': class2}
 
-        return torch.from_numpy(image)
+        return image#torch.from_numpy(image)
 
 class RandomCrop(object):
     """Crop randomly the image in a sample.
