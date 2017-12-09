@@ -23,12 +23,15 @@ from data_loading import *
 transform = transforms.Compose([transforms.ToPILImage(),transforms.Scale(256), transforms.RandomCrop(224), transforms.ToTensor(), transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])])
 
 
-train = SkinLesionDataset(csv_file='../datasets/ISIC-2017_Training_Part3_GroundTruth.csv',
-                                    root_dir='../datasets/ISIC-2017_Training_Data/', transform=transform)
-validation  = SkinLesionDataset(csv_file='../datasets/ISIC-2017_Validation_Part3_GroundTruth.csv',
-                                    root_dir='../datasets/ISIC-2017_Validation_Data/', transform = transform)
-test = SkinLesionDataset(csv_file='../datasets/ISIC-2017_Test_v2_Part3_GroundTruth.csv',
-                                    root_dir='../datasets/ISIC-2017_Test_v2_Data/', transform = transform)
+#input_dir= '../datasets/'
+input_dir = '../../../mnt/nfs/work1/lspector/aks/datasets/'
+
+train = SkinLesionDataset(csv_file=input_dir+'ISIC-2017_Training_Part3_GroundTruth.csv',
+                                    root_dir=input_dir+'ISIC-2017_Training_Data/', transform=transform)
+validation  = SkinLesionDataset(csv_file=input_dir+'ISIC-2017_Validation_Part3_GroundTruth.csv',
+                                    root_dir=input_dir+'ISIC-2017_Validation_Data/', transform = transform)
+test = SkinLesionDataset(csv_file=input_dir+'ISIC-2017_Test_v2_Part3_GroundTruth.csv',
+                                    root_dir=input_dir+'ISIC-2017_Test_v2_Data/', transform = transform)
 
 train_data = DataLoader(train, batch_size=8,
                         shuffle=True, num_workers=1)
