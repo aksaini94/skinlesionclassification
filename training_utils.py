@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 from sklearn import svm
+from copy import deepcopy
 
 plt.ion()   # interactive mode
 
@@ -70,7 +71,6 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_siz
                 _, preds = torch.max(outputs.data, 1)
                 #print(outputs), print(labels)
                 loss = criterion(outputs, labels)
-
 
                 # backward + optimize only if in training phase
                 if phase == 'train':
@@ -230,7 +230,7 @@ def train_meta_model(dataloaders, dataset_sizes, model_dir, num_model):
     return clf, models_list, num_times
 
 
-def test_meta_model(model, dataloaders, dataset_sizes):   
+def test_meta_model(dataloaders, dataset_sizes, model_dir, num_model):
     since = time.time()
     
     ii, jj, kk = num_models
@@ -271,10 +271,10 @@ def test_meta_model(model, dataloaders, dataset_sizes):
 
     return acc
 
-def train_model_epochs(model, criterion, optimizer, scheduler, dataloaders, dataset_sizes, num_epochs=25):
+def train_model_epochs(model, model_num, criterion, optimizer, scheduler, dataloaders, dataset_sizes, num_epochs=25):
     since = time.time()
     
-    model_state_dict_list = []
+    model_list = []
     best_model_wts = model.state_dict()
     best_acc = 0.0
 
@@ -314,7 +314,6 @@ def train_model_epochs(model, criterion, optimizer, scheduler, dataloaders, data
                 #print(outputs), print(labels)
                 loss = criterion(outputs, labels)
 
-
                 # backward + optimize only if in training phase
                 if phase == 'train':
                     loss.backward()
@@ -333,8 +332,11 @@ def train_model_epochs(model, criterion, optimizer, scheduler, dataloaders, data
             # deep copy the model
             #if phase == 'val' and epoch_acc > best_acc:
             #best_acc = epoch_acc
-            model_state_dict_list.append(model.state_dict())
-
+            #state = deepcopy(model)
+            best_model_wts = model.state_dict()
+            model_list.append(best_model_wts)
+            torch.save(best_model_wts, '../models/'+str(model_num)+str(1)+str(epoch)+'.pt')
+            
         print()
 
     time_elapsed = time.time() - since
@@ -344,13 +346,13 @@ def train_model_epochs(model, criterion, optimizer, scheduler, dataloaders, data
 
     # load best model weights
     #model.load_state_dict(best_model_wts)
-    return model_state_dict_list
+    return model_list
 
-def test_ensamble_model(dataloaders, dataset_sizes, model_dir, num_model): 
+def test_ensamble_model(model,dataloaders, dataset_sizes, model_dir, num_model): 
     # num_models = (i, j, k)
     since = time.time()
     
-    ii, jj, kk = num_models
+    ii, jj, kk = num_model
     
     correct = 0
     phase = 'test'
@@ -364,7 +366,7 @@ def test_ensamble_model(dataloaders, dataset_sizes, model_dir, num_model):
         for i in range(ii):
             for j in range(jj):
                 for k in range(kk):
-                    mymodel = torch.load(model_dir+str(i)+str(j)+str(k)+'.pt')
+                    mymodel =model.load_state_dict(torch.load(model_dir+str(i+1)+str(j+1)+str(k)+'.pt')
                     outputs = mymodel(inputs)
                     feat_list[:, count,:]=outputs.data.numpy()
                     count +=1

@@ -63,7 +63,7 @@ class SkinLesionDataset(Dataset):
         img_name = os.path.join(self.root_dir, self.classification_frame.ix[idx, 0]+'.jpg')
         segment_name = os.path.join(self.segment_dir, self.classification_frame.ix[idx, 0]+'_segmentation.png')
         image = io.imread(img_name)
-        if useSegmentation:
+        if self.useSegmentation:
             segmented_image = io.imread(segment_name)
             image = masking(image, segmented_image, 255)
         
