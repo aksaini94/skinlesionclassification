@@ -32,12 +32,16 @@ def show_landmarks(image):
     plt.pause(0.001) 
 
 
-
+def masking(img, img_segment, level_of_opaqueness):
+    #level_of_opaqueness: the more it it, the more opaque the object becomes, values between (0,255)
+    img_modified = img
+    img_modified[img_segment==0] =level_of_opaqueness
+    return img_modified
 
 class SkinLesionDataset(Dataset):
     """Face Landmarks dataset."""
 
-    def __init__(self, csv_file, root_dir, transform=None):
+    def __init__(self, csv_file, root_dir, segment_dir, useSegmentation, transform=None):
         """
         Args:
             csv_file (string): Path to the csv file with annotations.
@@ -47,16 +51,25 @@ class SkinLesionDataset(Dataset):
         """
         self.classification_frame = pd.read_csv(csv_file)
         self.root_dir = root_dir
+        self.segment_dir = segment_dir
         self.transform= transform
+        self.useSegmentation = useSegmentation
+        
 
     def __len__(self):
         return len(self.classification_frame)
 
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.classification_frame.ix[idx, 0]+'.jpg')
+        segment_name = os.path.join(self.segment_dir, self.classification_frame.ix[idx, 0]+'_segmentation.png')
         image = io.imread(img_name)
+        if useSegmentation:
+            segmented_image = io.imread(segment_name)
+            image = masking(image, segmented_image, 255)
+        
         sample = {'image': image, 'class1': self.classification_frame.ix[idx, 1],'class2': self.classification_frame.ix[idx, 2]}
-
+       
+        
         if self.transform:
             sample['image'] = self.transform(sample['image'])
 
@@ -117,6 +130,12 @@ class grey_world(object):
        # sample = {'image': torch.from_numpy(image), 'class1': class1,'class2': class2}
 
         return image#torch.from_numpy(image)
+    
+
+
+
+
+
 
 class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
