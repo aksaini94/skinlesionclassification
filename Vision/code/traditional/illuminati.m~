@@ -1,0 +1,23 @@
+function segmented = illuminati(im)
+
+[h, w, n] = size(im);
+
+representations = {@(x)x, @rgb2hsv};
+
+[~, reps] = size(representations);
+
+segmented = zeros(h, w , n*reps);
+
+for rep = 1:reps
+    image = representations{rep}(im);
+    for channel = 1:n
+        bw = im2bw(imadjust(image(:,:,channel)));
+        if reps == 2 & channel == 2
+            
+        segmented(:,:,(rep-1)*n+channel) = bwareaopen(, 50);
+    end
+end
+        
+    
+        
+ 
