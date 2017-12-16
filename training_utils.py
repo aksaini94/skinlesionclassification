@@ -13,6 +13,7 @@ import time
 import os
 from sklearn import svm
 from copy import deepcopy
+from sklearn.metrics import roc_auc_score
 
 plt.ion()   # interactive mode
 
@@ -35,10 +36,13 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_siz
 
     best_model_wts = model.state_dict()
     best_acc = 0.0
+    
 
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
+        pred_labels = np.array([])
+        true_labels = np.array([])
 
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
@@ -80,12 +84,16 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_siz
                 # statistics
                 running_loss += loss.data[0]
                 running_corrects += torch.sum(preds == labels.data)
+                pred_labels=np.concatenate((pred_labels,preds.numpy() ))
+                true_labels=np.concatenate((true_labels,labels.data.numpy() ))
+                
 
             epoch_loss = running_loss / dataset_sizes[phase]
             epoch_acc = running_corrects / dataset_sizes[phase]
+            epoch_auc = roc_auc_score(true_labels, pred_labels)
 
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-                phase, epoch_loss, epoch_acc))
+            print('{} Loss: {:.4f} Acc: {:.4f} AUC: {:.4f}'.format(
+                phase, epoch_loss, epoch_acc, epoch_auc))
 
             # deep copy the model
             if phase == 'val' and epoch_acc > best_acc:
@@ -271,7 +279,7 @@ def test_meta_model(dataloaders, dataset_sizes, model_dir, num_model):
 
     return acc
 
-def train_model_epochs(model, model_num, criterion, optimizer, scheduler, dataloaders, dataset_sizes, num_epochs=25):
+def train_model_epochs(model, model_num, model_dir, criterion, optimizer, scheduler, dataloaders, dataset_sizes, num_epochs=25):
     since = time.time()
     
     model_list = []
@@ -335,7 +343,7 @@ def train_model_epochs(model, model_num, criterion, optimizer, scheduler, datalo
             #state = deepcopy(model)
             best_model_wts = model.state_dict()
             model_list.append(best_model_wts)
-            torch.save(best_model_wts, '../models/'+str(model_num)+str(1)+str(epoch)+'.pt')
+            torch.save(best_model_wts, model_dir+str(model_num)+str(1)+str(epoch)+'.pt')
             
         print()
 
@@ -348,12 +356,13 @@ def train_model_epochs(model, model_num, criterion, optimizer, scheduler, datalo
     #model.load_state_dict(best_model_wts)
     return model_list
 
-def test_ensamble_model(model,dataloaders, dataset_sizes, model_dir, num_model): 
+def test_ensamble_model(model1, model2 ,dataloaders, dataset_sizes, model_dir, num_model): 
     # num_models = (i, j, k)
     since = time.time()
     
     ii, jj, kk = num_model
     
+        
     correct = 0
     phase = 'test'
     for data in dataloaders[phase]:
@@ -364,14 +373,18 @@ def test_ensamble_model(model,dataloaders, dataset_sizes, model_dir, num_model):
         feat_list=np.zeros((batch_size,ii*jj*kk,2))
         count = 0
         for i in range(ii):
+            if i==0:
+                model = deepcopy(model1)
+            else:
+                model = deepcopy(model2)
             for j in range(jj):
                 for k in range(kk):
-                    mymodel =model.load_state_dict(torch.load(model_dir+str(i+1)+str(j+1)+str(k)+'.pt')
-                    outputs = mymodel(inputs)
+                    model.load_state_dict(torch.load(model_dir+str(i+1)+str(j+1)+str(k)+'.pt'))
+                    outputs = model(inputs)
                     feat_list[:, count,:]=outputs.data.numpy()
                     count +=1
-        feat_list = np.sum(feat_list, axis=1)/feat_list.shape[1]
-        preds = np.amax(feat_list, axis = 1)
+        feat_list = np.sum(feat_list, axis=1)/feat_list.shape[1]     
+        preds = np.argmax(feat_list, axis = 1)
         correct += np.sum(preds == labels.data.numpy())
 
     acc = correct / dataset_sizes[phase]
