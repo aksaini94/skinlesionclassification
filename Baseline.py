@@ -22,15 +22,15 @@ from data_loading import *
 #transform_list = transforms.Compose([grey_world(),transforms.ToPILImage(),transforms.Scale(250),transforms.RandomHorizontalFlip() ,
 #                                     transforms.RandomCrop(224), transforms.ToTensor(), transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])])
 #without color constancy 
-transform_list = transforms.Compose([transforms.ToPILImage(),transforms.Scale(224),transforms.RandomCrop(224),
-                                     transforms.ToTensor(), transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])])
+transform_list = transforms.Compose([transforms.ToPILImage(),transforms.Scale(250),transforms.RandomHorizontalFlip() ,transforms.RandomCrop(224),
+                                     transforms.ToTensor(),transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])])
 
 
 # transforms.RandomRotation(90, expand=True) and VerticalFlip() not working for some reason!!
 #input_dir= '../datasets/'
 input_dir = '/mnt/nfs/work1/lspector/aks/datasets/'
 
-useSegmentation=False
+useSegmentation=True
 
 train = SkinLesionDataset(csv_file=input_dir+'ISIC-2017_Training_Part3_GroundTruth.csv',
                                     root_dir=input_dir+'ISIC-2017_Training_Data/',segment_dir=input_dir+'ISIC-2017_Training_Part1_GroundTruth',useSegmentation = useSegmentation, transform=transform_list)
@@ -56,8 +56,7 @@ dataset_sizes = {'train':len(train),'val':len(validation),'test':len(test)}
 print(dataset_sizes)
 
 dataloaders = {'train':train_data,'val':val_data,'test':test_data}
-get_ipython().magic(u'load_ext autoreload')
-get_ipython().magic(u'autoreload 2')
+
 
 
 
@@ -110,33 +109,50 @@ num_ftrs = model_vgg.classifier[6].out_features#model_vgg.fc.in_features
 #print(num_ftrs)
 model_vgg.classifier.add_module("7",nn.ReLU())
 model_vgg.classifier.add_module("8",nn.Linear(num_ftrs, 2))
-criterion = nn.CrossEntropyLoss()
+#criterion = nn.CrossEntropyLoss()
 
 # Observe that only parameters of final layer are being optimized as
 # opoosed to before.
-optimizer_conv = optim.SGD(model_vgg.classifier[8].parameters(), lr=0.001, weight_decay = 5.37e-04, momentum=0.9)
+#optimizer_conv = optim.SGD(model_vgg.classifier[8].parameters(), lr=1.13e-03, weight_decay = 5.37e-04, momentum=0.9)
 
 # Decay LR by a factor of 0.1 every 7 epochs
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
+#exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
 
-
-# In[60]:
-
-#Hyper-parameter tuning
-from numpy.random import uniform
 
 
 
 # In[45]:
 
-dataset_sizes1 = {'train':len(validation),'val':len(validation),'test':len(test)}
+#dataset_sizes1 = {'train':len(validation),'val':len(validation),'test':len(test)}
 #print(dataset_sizes1)
 
-dataloaders1 = {'train':val_data,'val':val_data,'test':test_data}
+#dataloaders1 = {'train':val_data,'val':val_data,'test':test_data}
 
-model_conv = train_model(model_resnet, criterion, optimizer_conv,
-                         exp_lr_scheduler, dataloaders,dataset_sizes,num_epochs=1)
+#model_conv = train_model(model_resnet, criterion, optimizer_conv,
+#                         exp_lr_scheduler, dataloaders,dataset_sizes,num_epochs=5)
 
-print("With using Normalization: ")
-test_model(model_conv, criterion, dataloaders,dataset_sizes)
+#print("With seg all ")
+#test_model(model_conv, criterion, dataloaders,dataset_sizes)
+
+print("Results using ensamble learning: vgg modified")
+#print("Saving epochs for RESNET")
+
+#models_dir = '../models/'
+models_dir = input_dir
+#model_state_list = None
+num_epochs = 10
+#model= model_resnet#, model_vgg
+#model_num = 1# 1 for resnet
+#models_list = train_model_epochs(model, model_num,models_dir,criterion, optimizer_conv,
+#                                     exp_lr_scheduler, dataloaders,dataset_sizes,num_epochs=num_epochs)
+
+acc = test_ensamble_model(model_resnet, model_vgg,dataloaders, dataset_sizes, models_dir, ([1],1, num_epochs))
+print(acc)
+
+
+#print("Results using Meta-model :resnet + vgg")
+#clf = train_meta_model(model_resnet, model_vgg, dataloaders, dataset_sizes, models_dir, ([0,1],1, num_epochs))
+
+#acc = test_meta_model(model_resnet, model_vgg, dataloaders, dataset_sizes, models_dir,([0,1],1, num_epochs), clf)
+#print(acc)
 

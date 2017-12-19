@@ -152,6 +152,8 @@ def test_model(model, criterion,dataloaders,dataset_sizes):
     #correct += (predicted == labels).sum()
 
     phase = 'test'
+    pred_labels = np.array([])
+    true_labels = np.array([])
     # Iterate over data.
     for data in dataloaders['test']:
         # get the inputs
@@ -173,12 +175,15 @@ def test_model(model, criterion,dataloaders,dataset_sizes):
         # statistics
         loss_final += loss.data[0]
         correct += torch.sum(preds == labels.data)
+        pred_labels=np.concatenate((pred_labels,preds.numpy() ))
+        true_labels=np.concatenate((true_labels,labels.data.numpy() ))
 
     loss_final = loss_final / dataset_sizes[phase]
     acc = correct / dataset_sizes[phase]
+    epoch_auc = roc_auc_score(true_labels, pred_labels)
 
-    print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-        phase, loss_final, acc))
+    print('{} Loss: {:.4f} Acc: {:.4f} AUC: {:.4f}'.format(
+                phase, loss_final, acc, epoch_auc))
 
     print()
 
@@ -191,14 +196,14 @@ def test_model(model, criterion,dataloaders,dataset_sizes):
     #model.load_state_dict(best_model_wts)
     #return model   
 
-def train_meta_model(dataloaders, dataset_sizes, model_dir, num_model):
+def train_meta_model(model1, model2, dataloaders, dataset_sizes, model_dir, num_models):
     # model_list = [model1,model2, ...]
     #num_times = number of time each model is to be applied
     
     since = time.time()
     
     ii, jj, kk = num_models
-    feat_list=np.zeros((dataset_sizes['val'],ii*jj*kk, 2))
+    feat_list=np.zeros((dataset_sizes['val'],len(ii)*jj*kk, 2))
     labels_list=np.zeros(dataset_sizes['val'])
     
     phase='val'
@@ -212,11 +217,15 @@ def train_meta_model(dataloaders, dataset_sizes, model_dir, num_model):
         labels = labels.long()
         # forward
         count = 0
-        for i in range(ii):
+        for i in ii:
+            if i==0:
+                model = deepcopy(model1)
+            else:
+                model = deepcopy(model2)
             for j in range(jj):
                 for k in range(kk):
-                    mymodel = torch.load(model_dir+str(i)+str(j)+str(k)+'.pt')
-                    outputs = mymodel(inputs)
+                    model.load_state_dict(torch.load(model_dir+str(i+1)+str(j+1)+str(k)+'.pt'))
+                    outputs = model(inputs)
                     feat_list[i*batch_size:(i+1)*batch_size, count,:]=outputs.data.numpy()
                     count +=1
    
@@ -235,28 +244,34 @@ def train_meta_model(dataloaders, dataset_sizes, model_dir, num_model):
         time_elapsed // 60, time_elapsed % 60))
     #print('Best val Acc: {:4f}'.format(best_acc))
 
-    return clf, models_list, num_times
+    return clf
 
 
-def test_meta_model(dataloaders, dataset_sizes, model_dir, num_model):
+def test_meta_model(model1, model2, dataloaders, dataset_sizes, model_dir, num_models, clf):
     since = time.time()
     
     ii, jj, kk = num_models
-    clf = model
     correct = 0
     phase = 'test'
+    pred_labels = np.array([])
+    true_labels = np.array([])
+
     for data in dataloaders[phase]:
         inputs, labels = data['image'], data['class1']
         batch_size = data['image'].shape[0]
         inputs, labels = Variable(inputs), Variable(labels)
         labels = labels.long()
-        feat_list=np.zeros((batch_size,ii*jj*kk,2))
+        feat_list=np.zeros((batch_size,len(ii)*jj*kk,2))
         count = 0
-        for i in range(ii):
+        for i in ii:
+            if i==0:
+                model = deepcopy(model1)
+            else:
+                model = deepcopy(model2)
             for j in range(jj):
                 for k in range(kk):
-                    mymodel = torch.load(model_dir+str(i)+str(j)+str(k)+'.pt')
-                    outputs = mymodel(inputs)
+                    model.load_state_dict(torch.load(model_dir+str(i+1)+str(j+1)+str(k)+'.pt'))
+                    outputs = model(inputs)
                     feat_list[:, count,:]=outputs.data.numpy()
                     count +=1
         #feat_list = np.sum(feat_list, axis=1)/feat_list.shape[1]
@@ -265,11 +280,14 @@ def test_meta_model(dataloaders, dataset_sizes, model_dir, num_model):
         preds = clf.predict(XX)
 
         correct += np.sum(preds == labels.data.numpy())
+        pred_labels=np.concatenate((pred_labels,preds ))
+        true_labels=np.concatenate((true_labels,labels.data.numpy() ))
 
     acc = correct / dataset_sizes[phase]
+    epoch_auc = roc_auc_score(true_labels, pred_labels)
 
-    print('{}  Acc: {:.4f}'.format(
-        phase, acc))
+    print('{}  Acc: {:.4f} AUC: {:.4f}'.format(
+        phase, acc, epoch_auc))
 
     print()
 
@@ -362,7 +380,8 @@ def test_ensamble_model(model1, model2 ,dataloaders, dataset_sizes, model_dir, n
     
     ii, jj, kk = num_model
     
-        
+    pred_labels = np.array([])
+    true_labels = np.array([])    
     correct = 0
     phase = 'test'
     for data in dataloaders[phase]:
@@ -370,15 +389,15 @@ def test_ensamble_model(model1, model2 ,dataloaders, dataset_sizes, model_dir, n
         batch_size = data['image'].shape[0]
         inputs, labels = Variable(inputs), Variable(labels)
         labels = labels.long()
-        feat_list=np.zeros((batch_size,ii*jj*kk,2))
+        feat_list=np.zeros((batch_size,len(ii)*jj*kk,2))
         count = 0
-        for i in range(ii):
+        for i in ii:
             if i==0:
                 model = deepcopy(model1)
             else:
                 model = deepcopy(model2)
             for j in range(jj):
-                for k in range(kk):
+                for k in range(5,kk):
                     model.load_state_dict(torch.load(model_dir+str(i+1)+str(j+1)+str(k)+'.pt'))
                     outputs = model(inputs)
                     feat_list[:, count,:]=outputs.data.numpy()
@@ -386,11 +405,14 @@ def test_ensamble_model(model1, model2 ,dataloaders, dataset_sizes, model_dir, n
         feat_list = np.sum(feat_list, axis=1)/feat_list.shape[1]     
         preds = np.argmax(feat_list, axis = 1)
         correct += np.sum(preds == labels.data.numpy())
+        pred_labels=np.concatenate((pred_labels,preds ))
+        true_labels=np.concatenate((true_labels,labels.data.numpy() ))
 
     acc = correct / dataset_sizes[phase]
+    epoch_auc = roc_auc_score(true_labels, pred_labels)
 
-    print('{}  Acc: {:.4f}'.format(
-        phase, acc))
+    print('{}  Acc: {:.4f} AUC: {:.4f}'.format(
+        phase, acc, epoch_auc))
 
     print()
 
