@@ -36,7 +36,6 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_siz
 
     best_model_wts = model.state_dict()
     best_acc = 0.0
-    
 
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -60,11 +59,6 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, dataset_siz
                 # get the inputs
                 inputs, labels = data['image'], data['class1']
 
-                # wrap them in Variable
-                #if use_gpu:
-                #    inputs = Variable(inputs.cuda())
-                #    labels = Variable(labels.cuda())
-                #else:
                 inputs, labels = Variable(inputs), Variable(labels)
                 labels = labels.long()
                 # zero the parameter gradients
@@ -144,12 +138,6 @@ def test_model(model, criterion,dataloaders,dataset_sizes):
     correct = 0.0
     total = 0.0
     loss_final =0.0
-    #for data in testloader:
-    #    images, labels = data
-    #    outputs = net(Variable(images))
-    #    _, predicted = torch.max(outputs.data, 1)
-    #total += labels.size(0)
-    #correct += (predicted == labels).sum()
 
     phase = 'test'
     pred_labels = np.array([])
@@ -162,8 +150,6 @@ def test_model(model, criterion,dataloaders,dataset_sizes):
         # wrap them in Variable
         inputs, labels = Variable(inputs), Variable(labels)
         labels = labels.long()
-        # zero the parameter gradients
-        #optimizer.zero_grad()
 
         # forward
         outputs = model(inputs)
@@ -190,16 +176,8 @@ def test_model(model, criterion,dataloaders,dataset_sizes):
     time_elapsed = time.time() - since
     print('Testing complete in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
-    #print('Best val Acc: {:4f}'.format(best_acc))
-
-    # load best model weights
-    #model.load_state_dict(best_model_wts)
-    #return model   
-
-def train_meta_model(model1, model2, dataloaders, dataset_sizes, model_dir, num_models):
-    # model_list = [model1,model2, ...]
-    #num_times = number of time each model is to be applied
     
+def train_meta_model(model1, model2, dataloaders, dataset_sizes, model_dir, num_models):
     since = time.time()
     
     ii, jj, kk = num_models
@@ -236,7 +214,6 @@ def train_meta_model(model1, model2, dataloaders, dataset_sizes, model_dir, num_
                   max_iter=-1, probability=False, random_state=None, shrinking=True,
                   tol=0.001, verbose=False)
     XX = np.concatenate((feat_list[:,:,0],feat_list[:,:,1]),axis=1 )
-    #XX = feat_list.reshape((dataset_sizes['val'], ii*jj*kk*2))
     clf.fit(XX, labels_list)  
 
     time_elapsed = time.time() - since
@@ -274,8 +251,6 @@ def test_meta_model(model1, model2, dataloaders, dataset_sizes, model_dir, num_m
                     outputs = model(inputs)
                     feat_list[:, count,:]=outputs.data.numpy()
                     count +=1
-        #feat_list = np.sum(feat_list, axis=1)/feat_list.shape[1]
-        #preds = np.amax(feat_list, axis = 1)
         XX = np.concatenate((feat_list[:,:,0],feat_list[:,:,1]),axis=1 )
         preds = clf.predict(XX)
 
@@ -324,11 +299,6 @@ def train_model_epochs(model, model_num, model_dir, criterion, optimizer, schedu
                 # get the inputs
                 inputs, labels = data['image'], data['class1']
 
-                # wrap them in Variable
-                #if use_gpu:
-                #    inputs = Variable(inputs.cuda())
-                #    labels = Variable(labels.cuda())
-                #else:
                 inputs, labels = Variable(inputs), Variable(labels)
                 labels = labels.long()
                 # zero the parameter gradients
@@ -355,10 +325,6 @@ def train_model_epochs(model, model_num, model_dir, criterion, optimizer, schedu
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(
                 phase, epoch_loss, epoch_acc))
 
-            # deep copy the model
-            #if phase == 'val' and epoch_acc > best_acc:
-            #best_acc = epoch_acc
-            #state = deepcopy(model)
             best_model_wts = model.state_dict()
             model_list.append(best_model_wts)
             torch.save(best_model_wts, model_dir+str(model_num)+str(1)+str(epoch)+'.pt')
@@ -368,10 +334,7 @@ def train_model_epochs(model, model_num, model_dir, criterion, optimizer, schedu
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
-    #print('Best val Acc: {:4f}'.format(best_acc))
-
-    # load best model weights
-    #model.load_state_dict(best_model_wts)
+    
     return model_list
 
 def test_ensamble_model(model1, model2 ,dataloaders, dataset_sizes, model_dir, num_model): 

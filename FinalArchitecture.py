@@ -19,11 +19,7 @@ from training_utils import *
 from data_loading import *
 
 
-#transform_list = transforms.Compose([grey_world(),transforms.ToPILImage(),transforms.Scale(250),transforms.RandomHorizontalFlip() ,
-#                                     transforms.RandomCrop(224), transforms.ToTensor(), transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])])
-#without color constancy 
-transform_list = transforms.Compose([transforms.ToPILImage(),transforms.Scale(250),transforms.RandomHorizontalFlip() ,transforms.RandomCrop(224),
-                                     transforms.ToTensor(),transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])])
+transform_list = transforms.Compose([grey_world(),transforms.ToPILImage(),transforms.Scale(250),transforms.RandomHorizontalFlip(),transforms.RandomCrop(224), transforms.ToTensor(), transforms.Normalize([0.485, 0.456,0.406],[0.229, 0.224, 0.225])])
 
 
 # transforms.RandomRotation(90, expand=True) and VerticalFlip() not working for some reason!!
@@ -34,6 +30,8 @@ useSegmentation=True
 
 train = SkinLesionDataset(csv_file=input_dir+'ISIC-2017_Training_Part3_GroundTruth.csv',
                                     root_dir=input_dir+'ISIC-2017_Training_Data/',segment_dir=input_dir+'ISIC-2017_Training_Part1_GroundTruth',useSegmentation = useSegmentation, transform=transform_list)
+
+# Make a smaller training set for hyperparameter tuning. Use the first 1000 examples of original training set.
 train_light = SkinLesionDataset(csv_file=input_dir+'ISIC-2017_Training_Part3_GroundTruth_light.csv',
                                     root_dir=input_dir+'ISIC-2017_Training_Data/',segment_dir=input_dir+'ISIC-2017_Training_Part1_GroundTruth',useSegmentation = useSegmentation, transform=transform_list)
 
@@ -59,22 +57,6 @@ dataloaders = {'train':train_data,'val':val_data,'test':test_data}
 
 
 
-
-
-
-# In[119]:
-
-def masking(img, img_segment, level_of_opaqueness):
-    #level_of_opaqueness: the more it it, the more opaque the object becomes, values between (0,255)
-    img_modified = img
-    img_modified[img_segment==0] =level_of_opaqueness
-    return img_modified
-
-
-
-
-# In[27]:
-
 model_resnet = torchvision.models.resnet34(pretrained=True)
 for param in model_resnet.parameters():
     param.requires_grad = False
@@ -95,9 +77,6 @@ optimizer_conv = optim.SGD(model_resnet.fc.parameters(), lr=1.13e-03, weight_dec
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
 
 
-
-
-# In[3]:
 
 model_vgg = torchvision.models.vgg19_bn(pretrained=True)
 for param in model_vgg.parameters():
@@ -120,9 +99,6 @@ model_vgg.classifier.add_module("8",nn.Linear(num_ftrs, 2))
 
 
 
-
-# In[45]:
-
 #dataset_sizes1 = {'train':len(validation),'val':len(validation),'test':len(test)}
 #print(dataset_sizes1)
 
@@ -134,20 +110,19 @@ model_vgg.classifier.add_module("8",nn.Linear(num_ftrs, 2))
 #print("With seg all ")
 #test_model(model_conv, criterion, dataloaders,dataset_sizes)
 
-print("Results using ensamble learning: vgg modified")
+#print("Results using ensamble learning: vgg modified")
 #print("Saving epochs for RESNET")
 
 #models_dir = '../models/'
-models_dir = input_dir
-#model_state_list = None
-num_epochs = 10
+#models_dir = input_dir
+#num_epochs = 10
 #model= model_resnet#, model_vgg
 #model_num = 1# 1 for resnet
 #models_list = train_model_epochs(model, model_num,models_dir,criterion, optimizer_conv,
 #                                     exp_lr_scheduler, dataloaders,dataset_sizes,num_epochs=num_epochs)
 
-acc = test_ensamble_model(model_resnet, model_vgg,dataloaders, dataset_sizes, models_dir, ([1],1, num_epochs))
-print(acc)
+#acc = test_ensamble_model(model_resnet, model_vgg,dataloaders, dataset_sizes, models_dir, ([1],1, num_epochs))
+#print(acc)
 
 
 #print("Results using Meta-model :resnet + vgg")

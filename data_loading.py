@@ -29,7 +29,6 @@ plt.ion()   # interactive mode
 def show_landmarks(image):
     """Show image with landmarks"""
     plt.imshow(image)
-    #plt.scatter(landmarks[:, 0], landmarks[:, 1], s=10, marker='.', c='r')
     plt.pause(0.001) 
 
 
@@ -54,8 +53,7 @@ class SkinLesionDataset(Dataset):
         self.root_dir = root_dir
         self.segment_dir = segment_dir
         self.transform= transform
-        self.useSegmentation = useSegmentation
-        
+        self.useSegmentation = useSegmentation       
 
     def __len__(self):
         return len(self.classification_frame)
@@ -69,14 +67,11 @@ class SkinLesionDataset(Dataset):
             image = masking(image, segmented_image, 255)
         
         sample = {'image': image, 'class1': self.classification_frame.ix[idx, 1],'class2': self.classification_frame.ix[idx, 2]}
-       
-        
+             
         if self.transform:
             sample['image'] = self.transform(sample['image'])
 
         return sample
-
-
 
 class Rescale(object):
     """Rescale the image in a sample to a given size.
@@ -92,11 +87,7 @@ class Rescale(object):
         self.output_size = output_size
 
     def __call__(self, sample):
-        image = sample#['image']
-        #class1 = sample['class1']
-        #class2 = sample['class2']
-        
-
+        image = sample
         h, w = image.shape[:2]
         if isinstance(self.output_size, int):
             if h > w:
@@ -110,9 +101,7 @@ class Rescale(object):
 
         img = transform.resize(image, (new_h, new_w))
 
-        #sample = {'image': img, 'class1': class1,'class2': class2}
-
-        return img#sample
+        return img
 
     
 def grey_world_func(nimg):
@@ -130,30 +119,17 @@ class grey_world(object):
 
        # sample = {'image': torch.from_numpy(image), 'class1': class1,'class2': class2}
 
-        return image#torch.from_numpy(image)
-    
-
-
-
-
+        return image
 
 
 class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
     def __call__(self, sample):
-        image = sample#['image']
-        #class1 = sample['class1']
-        #class2 = sample['class2']
-
-        # swap color axis because
-        # numpy image: H x W x C
-        # torch image: C X H X W
+        image = sample
         image = image.transpose((2, 0, 1))
 
-       # sample = {'image': torch.from_numpy(image), 'class1': class1,'class2': class2}
-
-        return image#torch.from_numpy(image)
+        return image
 
 class RandomCrop(object):
     """Crop randomly the image in a sample.
@@ -195,85 +171,13 @@ class Normalize(object):
     """
 
     def __init__(self, mean, std):
-        #assert isinstance(output_size, (int, tuple))
         self.mean = mean
         self.std = std
 
     def __call__(self, sample):
-        image = sample#['image']
-        #class1 = sample['class1']
-        #class2 = sample['class2']
+        image = sample
         img = sample
-
-        #img = transforms.functional.normalize(image, self.mean, self.std )
-        
-        #img = transform.resize(image, (new_h, new_w))
 
         sample = {'image': img, 'class1': class1,'class2': class2}
 
         return sample
-
-
-# Helper function to show a batch
-def show_landmarks_batch(sample_batched):
-    """Show image with landmarks for a batch of samples."""
-    images_batch = \
-            sample_batched['image']
-    batch_size = len(images_batch)
-    im_size = images_batch.size(2)
-
-    grid = utils.make_grid(images_batch)
-    plt.imshow(grid.numpy().transpose((1, 2, 0)))
-
-    for i in range(batch_size):
-        plt.title('Batch from dataloader')
-
-
-"""
-
-data_transforms = {
-    'train': transforms.Compose([
-        transforms.ToTensor()
-        #transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ]),
-    'val': transforms.Compose([
-        transforms.ToTensor()
-        #transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ]),
-}
-
-data_dir = 'hymenoptera_data'
-image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x),
-                                          transforms.ToTensor())
-                  for x in ['train', 'val','test']}
-dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=4,
-                                             shuffle=True, num_workers=4)
-              for x in ['train', 'val','test']}
-dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val','test']}
-class_names = image_datasets['train'].classes
-
-
-
-def imshow(inp, title=None):
-    #Imshow for Tensor.
-    inp = inp.numpy().transpose((1, 2, 0))
-    mean = np.array([0.485, 0.456, 0.406])
-    std = np.array([0.229, 0.224, 0.225])
-    inp = std * inp + mean
-    inp = np.clip(inp, 0, 1)
-    plt.imshow(inp)
-    if title is not None:
-        plt.title(title)
-    plt.pause(0.001)  # pause a bit so that plots are updated
-
-
-# Get a batch of training data
-inputs, classes = next(iter(dataloaders['train']))
-
-# Make a grid from batch
-out = torchvision.utils.make_grid(inputs)
-
-imshow(out, title=[class_names[x] for x in classes])
-
-"""
-
